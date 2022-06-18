@@ -2,17 +2,18 @@ using Booking;
 using Booking.Configuration;
 using Booking.Data;
 using Booking.Extensions;
-using BuildingBlocks.Domain;
+using BuildingBlocks.Core;
 using BuildingBlocks.EFCore;
 using BuildingBlocks.EventStoreDB;
+using BuildingBlocks.HealthCheck;
 using BuildingBlocks.IdsGenerator;
 using BuildingBlocks.Jwt;
 using BuildingBlocks.Logging;
 using BuildingBlocks.Mapster;
 using BuildingBlocks.MassTransit;
+using BuildingBlocks.MessageProcessor;
 using BuildingBlocks.OpenTelemetry;
 using BuildingBlocks.Swagger;
-using BuildingBlocks.Utils;
 using BuildingBlocks.Web;
 using Figgle;
 using FluentValidation;
@@ -30,8 +31,8 @@ builder.Services.Configure<GrpcOptions>(options => configuration.GetSection("Grp
 
 Console.WriteLine(FiggleFonts.Standard.Render(appOptions.Name));
 
-builder.Services.AddTransient<IBusPublisher, BusPublisher>();
-builder.Services.AddCustomDbContext<BookingDbContext>(configuration, typeof(BookingRoot).Assembly);
+builder.Services.AddCustomDbContext<BookingDbContext>(configuration);
+builder.Services.AddPersistMessage(configuration);
 
 builder.AddCustomSerilog();
 builder.Services.AddJwt();
@@ -46,14 +47,16 @@ builder.Services.AddCustomMapster(typeof(BookingRoot).Assembly);
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddTransient<IEventMapper, EventMapper>();
-builder.Services.AddTransient<IBusPublisher, BusPublisher>();
-
+builder.Services.AddCustomHealthCheck();
 builder.Services.AddCustomMassTransit(typeof(BookingRoot).Assembly, env);
 builder.Services.AddCustomOpenTelemetry();
 builder.Services.AddTransient<AuthHeaderHandler>();
+
+builder.Services.AddMagicOnionClients();
+
 SnowFlakIdGenerator.Configure(3);
 
-// EventStoreDB Configuration
+// ref: https://github.com/oskardudycz/EventSourcing.NetCore/tree/main/Sample/EventStoreDB/ECommerce
 builder.Services.AddEventStore(configuration, typeof(BookingRoot).Assembly)
     .AddEventStoreDBSubscriptionToAll();
 
@@ -66,7 +69,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseSerilogRequestLogging();
-app.UseMigrations(env);
+app.UseMigrations();
 app.UseCorrelationId();
 app.UseRouting();
 app.UseHttpMetrics();
@@ -74,6 +77,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseProblemDetails();
+app.UseCustomHealthCheck();
 
 app.UseEndpoints(endpoints =>
 {
@@ -84,3 +88,7 @@ app.UseEndpoints(endpoints =>
 app.MapGet("/", x => x.Response.WriteAsync(appOptions.Name));
 
 app.Run();
+
+public partial class Program
+{
+}

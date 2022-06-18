@@ -1,8 +1,10 @@
-using BuildingBlocks.Domain;
+using BuildingBlocks.Core;
 using BuildingBlocks.EFCore;
+using BuildingBlocks.HealthCheck;
 using BuildingBlocks.Logging;
 using BuildingBlocks.Mapster;
 using BuildingBlocks.MassTransit;
+using BuildingBlocks.MessageProcessor;
 using BuildingBlocks.OpenTelemetry;
 using BuildingBlocks.Swagger;
 using BuildingBlocks.Utils;
@@ -25,13 +27,14 @@ var env = builder.Environment;
 var appOptions = builder.Services.GetOptions<AppOptions>("AppOptions");
 Console.WriteLine(FiggleFonts.Standard.Render(appOptions.Name));
 
-builder.Services.AddTransient<IBusPublisher, BusPublisher>();
 builder.Services.AddScoped<IDbContext>(provider => provider.GetService<IdentityContext>()!);
 
 builder.Services.AddDbContext<IdentityContext>(options =>
         options.UseSqlServer(
             configuration.GetConnectionString("DefaultConnection"),
             x => x.MigrationsAssembly(typeof(IdentityRoot).Assembly.GetName().Name)));
+
+builder.Services.AddPersistMessage(configuration);
 
 builder.AddCustomSerilog();
 builder.Services.AddControllers();
@@ -42,9 +45,8 @@ builder.Services.AddValidatorsFromAssembly(typeof(IdentityRoot).Assembly);
 builder.Services.AddCustomProblemDetails();
 builder.Services.AddCustomMapster(typeof(IdentityRoot).Assembly);
 builder.Services.AddScoped<IDataSeeder, IdentityDataSeeder>();
-
+builder.Services.AddCustomHealthCheck();
 builder.Services.AddTransient<IEventMapper, EventMapper>();
-builder.Services.AddTransient<IBusPublisher, BusPublisher>();
 
 builder.Services.AddCustomMassTransit(typeof(IdentityRoot).Assembly, env);
 builder.Services.AddCustomOpenTelemetry();
@@ -60,7 +62,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseSerilogRequestLogging();
-app.UseMigrations(env);
+app.UseMigrations();
 app.UseCorrelationId();
 app.UseRouting();
 app.UseHttpMetrics();
@@ -69,6 +71,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseIdentityServer();
+app.UseCustomHealthCheck();
 
 app.UseEndpoints(endpoints =>
 {
@@ -79,3 +82,5 @@ app.UseEndpoints(endpoints =>
 app.MapGet("/", x => x.Response.WriteAsync(appOptions.Name));
 
 app.Run();
+
+public partial class Program {}

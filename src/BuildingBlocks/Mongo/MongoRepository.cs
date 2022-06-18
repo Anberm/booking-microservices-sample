@@ -1,11 +1,11 @@
 using System.Linq.Expressions;
-using BuildingBlocks.Domain.Model;
+using BuildingBlocks.Core.Model;
 using MongoDB.Driver;
 
 namespace BuildingBlocks.Mongo;
 
 public class MongoRepository<TEntity, TId> : IMongoRepository<TEntity, TId>
-    where TEntity : class, IEntity<TId>
+    where TEntity : class, IAggregate<TId>
 {
     private readonly IMongoDbContext _context;
     protected readonly IMongoCollection<TEntity> DbSet;

@@ -1,14 +1,15 @@
-using BuildingBlocks.Domain;
+using BuildingBlocks.Core;
 using BuildingBlocks.EFCore;
 using BuildingBlocks.Exception;
+using BuildingBlocks.HealthCheck;
 using BuildingBlocks.IdsGenerator;
 using BuildingBlocks.Jwt;
 using BuildingBlocks.Logging;
 using BuildingBlocks.Mapster;
 using BuildingBlocks.MassTransit;
+using BuildingBlocks.MessageProcessor;
 using BuildingBlocks.OpenTelemetry;
 using BuildingBlocks.Swagger;
-using BuildingBlocks.Utils;
 using BuildingBlocks.Web;
 using Figgle;
 using FluentValidation;
@@ -27,8 +28,9 @@ var env = builder.Environment;
 var appOptions = builder.Services.GetOptions<AppOptions>("AppOptions");
 Console.WriteLine(FiggleFonts.Standard.Render(appOptions.Name));
 
-builder.Services.AddTransient<IBusPublisher, BusPublisher>();
-builder.Services.AddCustomDbContext<PassengerDbContext>(configuration, typeof(PassengerRoot).Assembly);
+builder.Services.AddCustomDbContext<PassengerDbContext>(configuration);
+builder.Services.AddPersistMessage(configuration);
+
 builder.AddCustomSerilog();
 builder.Services.AddJwt();
 builder.Services.AddControllers();
@@ -39,10 +41,8 @@ builder.Services.AddValidatorsFromAssembly(typeof(PassengerRoot).Assembly);
 builder.Services.AddCustomProblemDetails();
 builder.Services.AddCustomMapster(typeof(PassengerRoot).Assembly);
 builder.Services.AddHttpContextAccessor();
-
 builder.Services.AddTransient<IEventMapper, EventMapper>();
-builder.Services.AddTransient<IBusPublisher, BusPublisher>();
-
+builder.Services.AddCustomHealthCheck();
 builder.Services.AddCustomMassTransit(typeof(PassengerRoot).Assembly, env);
 builder.Services.AddCustomOpenTelemetry();
 builder.Services.AddGrpc(options =>
@@ -62,7 +62,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseSerilogRequestLogging();
-app.UseMigrations(env);
+app.UseMigrations();
 app.UseCorrelationId();
 app.UseRouting();
 app.UseHttpMetrics();
@@ -70,6 +70,7 @@ app.UseProblemDetails();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseCustomHealthCheck();
 
 app.UseEndpoints(endpoints =>
 {
@@ -81,3 +82,7 @@ app.UseEndpoints(endpoints =>
 app.MapGet("/", x => x.Response.WriteAsync(appOptions.Name));
 
 app.Run();
+
+public partial class Program
+{
+}

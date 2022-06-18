@@ -1,6 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Ardalis.GuardClauses;
+using BuildingBlocks.Core.CQRS;
 using BuildingBlocks.EventStoreDB.Repository;
 using Flight.Data;
 using Flight.Flights.Dtos;
@@ -12,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Flight.Flights.Features.UpdateFlight;
 
-public class UpdateFlightCommandHandler : IRequestHandler<UpdateFlightCommand, FlightResponseDto>
+public class UpdateFlightCommandHandler : ICommandHandler<UpdateFlightCommand, FlightResponseDto>
 {
     private readonly FlightDbContext _flightDbContext;
     private readonly IMapper _mapper;
@@ -27,7 +28,7 @@ public class UpdateFlightCommandHandler : IRequestHandler<UpdateFlightCommand, F
     {
         Guard.Against.Null(command, nameof(command));
 
-        var flight = await _flightDbContext.Flights.SingleOrDefaultAsync(x => x.FlightNumber == command.FlightNumber && !x.IsDeleted,
+        var flight = await _flightDbContext.Flights.SingleOrDefaultAsync(x => x.Id == command.Id && !x.IsDeleted,
             cancellationToken);
 
         if (flight is null)
@@ -35,7 +36,7 @@ public class UpdateFlightCommandHandler : IRequestHandler<UpdateFlightCommand, F
 
 
         flight.Update(command.Id, command.FlightNumber, command.AircraftId, command.DepartureAirportId, command.DepartureDate,
-            command.ArriveDate, command.ArriveAirportId, command.DurationMinutes, command.FlightDate, FlightStatus.Completed, command.Price, command.IsDeleted);
+            command.ArriveDate, command.ArriveAirportId, command.DurationMinutes, command.FlightDate, command.Status, command.Price, command.IsDeleted);
 
         var updateFlight = _flightDbContext.Flights.Update(flight);
 

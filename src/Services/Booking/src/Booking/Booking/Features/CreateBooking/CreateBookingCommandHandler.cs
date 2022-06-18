@@ -1,35 +1,26 @@
 using Ardalis.GuardClauses;
 using Booking.Booking.Exceptions;
 using Booking.Booking.Models.ValueObjects;
-using Booking.Configuration;
 using BuildingBlocks.Contracts.Grpc;
+using BuildingBlocks.Core.CQRS;
 using BuildingBlocks.EventStoreDB.Repository;
-using Grpc.Net.Client;
-using MagicOnion.Client;
-using MapsterMapper;
 using MediatR;
-using Microsoft.Extensions.Options;
 
 namespace Booking.Booking.Features.CreateBooking;
 
-public class CreateBookingCommandHandler : IRequestHandler<CreateBookingCommand, ulong>
+public class CreateBookingCommandHandler : ICommandHandler<CreateBookingCommand, ulong>
 {
     private readonly IEventStoreDBRepository<Models.Booking> _eventStoreDbRepository;
     private readonly IFlightGrpcService _flightGrpcService;
     private readonly IPassengerGrpcService _passengerGrpcService;
 
-
-    public CreateBookingCommandHandler(
-        IOptions<GrpcOptions> grpcOptions,
-        IEventStoreDBRepository<Models.Booking> eventStoreDbRepository)
+    public CreateBookingCommandHandler(IEventStoreDBRepository<Models.Booking> eventStoreDbRepository,
+        IPassengerGrpcService passengerGrpcService,
+        IFlightGrpcService flightGrpcService)
     {
         _eventStoreDbRepository = eventStoreDbRepository;
-
-        var channelFlight = GrpcChannel.ForAddress(grpcOptions.Value.FlightAddress);
-        _flightGrpcService = new Lazy<IFlightGrpcService>(() => MagicOnionClient.Create<IFlightGrpcService>(channelFlight)).Value;
-
-        var channelPassenger = GrpcChannel.ForAddress(grpcOptions.Value.PassengerAddress);
-        _passengerGrpcService = new Lazy<IPassengerGrpcService>(() => MagicOnionClient.Create<IPassengerGrpcService>(channelPassenger)).Value;
+        _passengerGrpcService = passengerGrpcService;
+        _flightGrpcService = flightGrpcService;
     }
 
     public async Task<ulong> Handle(CreateBookingCommand command,
@@ -38,8 +29,10 @@ public class CreateBookingCommandHandler : IRequestHandler<CreateBookingCommand,
         Guard.Against.Null(command, nameof(command));
 
         var flight = await _flightGrpcService.GetById(command.FlightId);
+
         if (flight is null)
             throw new FlightNotFoundException();
+
         var passenger = await _passengerGrpcService.GetById(command.PassengerId);
 
         var emptySeat = (await _flightGrpcService.GetAvailableSeats(command.FlightId))?.First();

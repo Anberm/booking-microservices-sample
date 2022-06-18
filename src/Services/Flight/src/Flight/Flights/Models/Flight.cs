@@ -1,5 +1,5 @@
 using System;
-using BuildingBlocks.Domain.Model;
+using BuildingBlocks.Core.Model;
 using Flight.Flights.Events.Domain;
 
 namespace Flight.Flights.Models;
@@ -54,7 +54,42 @@ public class Flight : Aggregate<long>
         long arriveAirportId, decimal durationMinutes, DateTime flightDate, FlightStatus status,
         decimal price, bool isDeleted = false)
     {
+        FlightNumber = flightNumber;
+        AircraftId = aircraftId;
+        DepartureAirportId = departureAirportId;
+        DepartureDate = departureDate;
+        arriveDate = ArriveDate;
+        ArriveAirportId = arriveAirportId;
+        DurationMinutes = durationMinutes;
+        FlightDate = flightDate;
+        Status = status;
+        Price = price;
+        IsDeleted = isDeleted;
+
         var @event = new FlightUpdatedDomainEvent(id, flightNumber, aircraftId, departureDate, departureAirportId,
+            arriveDate, arriveAirportId, durationMinutes, flightDate, status, price, isDeleted);
+
+        AddDomainEvent(@event);
+    }
+
+    public void Delete(long id, string flightNumber, long aircraftId,
+        long departureAirportId, DateTime departureDate, DateTime arriveDate,
+        long arriveAirportId, decimal durationMinutes, DateTime flightDate, FlightStatus status,
+        decimal price, bool isDeleted = true)
+    {
+        FlightNumber = flightNumber;
+        AircraftId = aircraftId;
+        DepartureAirportId = departureAirportId;
+        DepartureDate = departureDate;
+        arriveDate = ArriveDate;
+        ArriveAirportId = arriveAirportId;
+        DurationMinutes = durationMinutes;
+        FlightDate = flightDate;
+        Status = status;
+        Price = price;
+        IsDeleted = isDeleted;
+
+        var @event = new FlightDeletedDomainEvent(id, flightNumber, aircraftId, departureDate, departureAirportId,
             arriveDate, arriveAirportId, durationMinutes, flightDate, status, price, isDeleted);
 
         AddDomainEvent(@event);
