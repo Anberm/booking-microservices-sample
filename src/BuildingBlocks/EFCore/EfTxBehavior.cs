@@ -1,6 +1,7 @@
 using System.Data;
 using System.Text.Json;
 using BuildingBlocks.Core;
+using BuildingBlocks.Core.Event;
 using MediatR;
 using Microsoft.Extensions.Logging;
 
@@ -60,11 +61,13 @@ public class EfTxBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TRe
 
             var domainEvents = _dbContextBase.GetDomainEvents();
 
-            await _eventDispatcher.SendAsync(domainEvents.ToArray(), cancellationToken);
+            var eventType = typeof(TRequest).IsAssignableTo(typeof(IInternalCommand)) ? EventType.InternalCommand : EventType.DomainEvent;
+
+            await _eventDispatcher.SendAsync(domainEvents.ToArray(), eventType, cancellationToken);
 
             return response;
         }
-        catch
+        catch(System.Exception ex)
         {
             await _dbContextBase.RollbackTransactionAsync(cancellationToken);
             throw;

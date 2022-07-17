@@ -77,6 +77,7 @@ High-level plan is represented in the table
 - ✔️ **[`MongoDB.Driver`](https://github.com/mongodb/mongo-csharp-driver)** - .NET Driver for MongoDB.
 - ✔️ **[`xUnit.net`](https://github.com/xunit/xunit)** - A free, open source, community-focused unit testing tool for the .NET Framework.
 - ✔️ **[`Respawn`](https://github.com/jbogard/Respawn)** - Respawn is a small utility to help in resetting test databases to a clean state.
+- ✔️ **[`Mongo2Go`](https://github.com/Mongo2Go/Mongo2Go)** - Providing multiple, temporary and isolated MongoDB databases for unit tests (or to be precise: integration tests).
 
 ## The Domain And Bounded Context - Service Boundary
 
@@ -87,6 +88,8 @@ High-level plan is represented in the table
 - `Passenger Service`: The Passenger Service is a bounded context for managing passenger information, tracking activities and subscribing to get notification for out of stock products.
 
 - `Booking Service`: The Booking Service is a bounded context for managing all operation related to booking ticket.
+
+![](./assets/microservices.jpg)
 
 ## Structure of Project
 
@@ -99,6 +102,8 @@ We have a separate microservice ([IdentityServer](https://github.com/DuendeSoftw
 I used [RabbitMQ](https://github.com/rabbitmq) as my MessageBroker for async communication between microservices using the eventual consistency mechanism. Each microservice uses [MassTransit](https://github.com/MassTransit/MassTransit) to interface with [RabbitMQ](https://github.com/rabbitmq) providing, messaging, availability, reliability, etc.
 
 Microservices are `event based` which means they can publish and/or subscribe to any events occurring in the setup. By using this approach for communicating between services, each microservice does not need to know about the other services or handle errors occurred in other microservices.
+
+After saving data in write side, I save a [Internal Command](https://github.com/kgrzybek/modular-monolith-with-ddd#38-internal-processing) record in my Persist Messages storage (like something we do in outbox pattern) and after committing transaction in write side, trigger our command handler in read side  and this handler could save their read models in our MongoDB database.
 
 I treat each request as a distinct use case or slice, encapsulating and grouping all concerns from front-end to back.
 When adding or changing a feature in an application in n-tire architecture, we are typically touching many "layers" in an application. We are changing the user interface, adding fields to models, modifying validation, and so on. Instead of coupling across a layer, we couple vertically along a slice. We `minimize coupling` `between slices`, and `maximize coupling` `in a slice`.
