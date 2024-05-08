@@ -1,27 +1,43 @@
 using System.Linq.Expressions;
 using BuildingBlocks.Core.Model;
-using BuildingBlocks.PersistMessageProcessor.Data;
+using BuildingBlocks.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Query;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace BuildingBlocks.EFCore;
 
+using Ardalis.GuardClauses;
+using Humanizer;
+using Microsoft.EntityFrameworkCore.Metadata;
+
 public static class Extensions
 {
     public static IServiceCollection AddCustomDbContext<TContext>(
-        this IServiceCollection services,
-        IConfiguration configuration)
+        this IServiceCollection services)
         where TContext : DbContext, IDbContext
     {
-        services.AddDbContext<TContext>(options =>
-            options.UseSqlServer(
-                configuration.GetConnectionString("DefaultConnection"),
-                x => x.MigrationsAssembly(typeof(TContext).Assembly.GetName().Name)));
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
+
+        services.AddValidateOptions<PostgresOptions>();
+
+        services.AddDbContext<TContext>((sp, options) =>
+        {
+            var postgresOptions = sp.GetRequiredService<PostgresOptions>();
+
+            Guard.Against.Null(options, nameof(postgresOptions));
+
+            options.UseNpgsql(postgresOptions?.ConnectionString,
+                    dbOptions =>
+                    {
+                        dbOptions.MigrationsAssembly(typeof(TContext).Assembly.GetName().Name);
+                    })
+                // https://github.com/efcore/EFCore.NamingConventions
+                .UseSnakeCaseNamingConvention();
+        });
 
         services.AddScoped<IDbContext>(provider => provider.GetService<TContext>());
 
@@ -34,7 +50,9 @@ public static class Extensions
         MigrateDatabaseAsync<TContext>(app.ApplicationServices).GetAwaiter().GetResult();
 
         if (!env.IsEnvironment("test"))
+        {
             SeedDataAsync(app.ApplicationServices).GetAwaiter().GetResult();
+        }
 
         return app;
     }
@@ -45,7 +63,7 @@ public static class Extensions
     {
         Expression<Func<IAggregate, bool>> filterExpr = e => !e.IsDeleted;
         foreach (var mutableEntityType in modelBuilder.Model.GetEntityTypes()
-                     .Where(m => m.ClrType.IsAssignableTo(typeof(IAudit))))
+                     .Where(m => m.ClrType.IsAssignableTo(typeof(IEntity))))
         {
             // modify expression to handle correct child type
             var parameter = Expression.Parameter(mutableEntityType.ClrType);
@@ -58,13 +76,40 @@ public static class Extensions
         }
     }
 
+
+    //ref: https://andrewlock.net/customising-asp-net-core-identity-ef-core-naming-conventions-for-postgresql/
+    public static void ToSnakeCaseTables(this ModelBuilder modelBuilder)
+    {
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        {
+            // Replace table names
+            entity.SetTableName(entity.GetTableName()?.Underscore());
+
+            var tableObjectIdentifier =
+                StoreObjectIdentifier.Table(entity.GetTableName()?.Underscore()!, entity.GetSchema());
+
+            // Replace column names
+            foreach (var property in entity.GetProperties())
+            {
+                property.SetColumnName(property.GetColumnName(tableObjectIdentifier)?.Underscore());
+            }
+
+            foreach (var key in entity.GetKeys())
+            {
+                key.SetName(key.GetName()?.Underscore());
+            }
+
+            foreach (var key in entity.GetForeignKeys())
+            {
+                key.SetConstraintName(key.GetConstraintName()?.Underscore());
+            }
+        }
+    }
+
     private static async Task MigrateDatabaseAsync<TContext>(IServiceProvider serviceProvider)
         where TContext : DbContext, IDbContext
     {
         using var scope = serviceProvider.CreateScope();
-
-        var persistMessageContext = scope.ServiceProvider.GetRequiredService<PersistMessageDbContext>();
-        await persistMessageContext.Database.MigrateAsync();
 
         var context = scope.ServiceProvider.GetRequiredService<TContext>();
         await context.Database.MigrateAsync();

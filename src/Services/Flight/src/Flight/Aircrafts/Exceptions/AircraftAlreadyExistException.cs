@@ -1,11 +1,11 @@
+namespace Flight.Aircrafts.Exceptions;
+
 using System.Net;
 using BuildingBlocks.Exception;
 
-namespace Flight.Aircrafts.Exceptions;
-
 public class AircraftAlreadyExistException : AppException
 {
-    public AircraftAlreadyExistException() : base("Flight already exist!", HttpStatusCode.Conflict)
+    public AircraftAlreadyExistException() : base("Aircraft already exist!", HttpStatusCode.Conflict)
     {
     }
 }

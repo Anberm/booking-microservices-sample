@@ -1,6 +1,6 @@
-using BuildingBlocks.Exception;
-
 namespace Booking.Booking.Exceptions;
+
+using BuildingBlocks.Exception;
 
 public class FlightNotFoundException : NotFoundException
 {

@@ -1,11 +1,12 @@
-﻿using Flight.Seats.Features.CreateSeat;
-using FluentAssertions;
+﻿using FluentAssertions;
 using FluentValidation.TestHelper;
 using Unit.Test.Common;
 using Unit.Test.Fakes;
 using Xunit;
 
 namespace Unit.Test.Seat.Features;
+
+using global::Flight.Seats.Features.CreatingSeat.V1;
 
 [Collection(nameof(UnitTestFixture))]
 public class CreateSeatCommandValidatorTests
@@ -15,7 +16,7 @@ public class CreateSeatCommandValidatorTests
     {
         // Arrange
         var command = new FakeValidateCreateSeatCommand().Generate();
-        var validator = new CreateSeatCommandValidator();
+        var validator = new CreateSeatValidator();
 
         // Act
         var result = validator.TestValidate(command);

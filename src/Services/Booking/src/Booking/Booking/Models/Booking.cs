@@ -1,17 +1,16 @@
-using Booking.Booking.Events.Domain;
-using Booking.Booking.Models.ValueObjects;
 using BuildingBlocks.EventStoreDB.Events;
-using BuildingBlocks.Utils;
-using Microsoft.AspNetCore.Http;
 
 namespace Booking.Booking.Models;
 
-public record Booking : AggregateEventSourcing<long>
+using Features.CreatingBook.V1;
+using ValueObjects;
+
+public record Booking : AggregateEventSourcing<Guid>
 {
     public Trip Trip { get; private set; }
     public PassengerInfo PassengerInfo { get; private set; }
 
-    public static Booking Create(long id, PassengerInfo passengerInfo, Trip trip, bool isDeleted = false, long? userId = null)
+    public static Booking Create(Guid id, PassengerInfo passengerInfo, Trip trip, bool isDeleted = false, long? userId = null)
     {
         var booking = new Booking { Id = id, Trip = trip, PassengerInfo = passengerInfo, IsDeleted = isDeleted };
 

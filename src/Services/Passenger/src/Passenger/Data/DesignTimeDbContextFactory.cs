@@ -9,8 +9,8 @@ public class DesignTimeDbContextFactory: IDesignTimeDbContextFactory<PassengerDb
     {
         var builder = new DbContextOptionsBuilder<PassengerDbContext>();
 
-        builder.UseSqlServer(
-            "Data Source=.\\sqlexpress;Initial Catalog=PassengerDB;Persist Security Info=False;Integrated Security=SSPI");
-        return new PassengerDbContext(builder.Options, null);
+        builder.UseNpgsql("Server=localhost;Port=5432;Database=passenger;User Id=postgres;Password=postgres;Include Error Detail=true")
+            .UseSnakeCaseNamingConvention();
+        return new PassengerDbContext(builder.Options);
     }
 }

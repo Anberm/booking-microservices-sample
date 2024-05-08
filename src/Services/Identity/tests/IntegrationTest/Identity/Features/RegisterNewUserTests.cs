@@ -2,22 +2,18 @@
 using BuildingBlocks.Contracts.EventBus.Messages;
 using BuildingBlocks.TestBase;
 using FluentAssertions;
-using Grpc.Net.Client;
+using Identity.Api;
 using Identity.Data;
 using Integration.Test.Fakes;
-using MassTransit;
-using MassTransit.Testing;
 using Xunit;
 
 namespace Integration.Test.Identity.Features;
 
-public class RegisterNewUserTests : IntegrationTestBase<Program, IdentityContext>
+public class RegisterNewUserTests : IdentityIntegrationTestBase
 {
-    private readonly ITestHarness _testHarness;
-
-    public RegisterNewUserTests(IntegrationTestFixture<Program, IdentityContext> integrationTestFixture) : base(integrationTestFixture)
+    public RegisterNewUserTests(
+        TestWriteFixture<Program, IdentityContext> integrationTestFactory) : base(integrationTestFactory)
     {
-        _testHarness = Fixture.TestHarness;
     }
 
     [Fact]
@@ -32,7 +28,7 @@ public class RegisterNewUserTests : IntegrationTestBase<Program, IdentityContext
         // Assert
         response?.Should().NotBeNull();
         response?.Username.Should().Be(command.Username);
-        (await _testHarness.Published.Any<Fault<UserCreated>>()).Should().BeFalse();
-        (await _testHarness.Published.Any<UserCreated>()).Should().BeTrue();
+
+        (await Fixture.WaitForPublishing<UserCreated>()).Should().Be(true);
     }
 }

@@ -1,6 +1,6 @@
-using BuildingBlocks.Exception;
-
 namespace Flight.Flights.Exceptions;
+
+using BuildingBlocks.Exception;
 
 public class FlightAlreadyExistException : ConflictException
 {

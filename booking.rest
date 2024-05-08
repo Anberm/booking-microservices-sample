@@ -1,12 +1,15 @@
-# https://github.com/Huachao/vscode-restclient
-@api-gateway=https://localhost:5000
-@identity-api=https://localhost:5005
-@flight-api=https://localhost:5003
-@passenger-api=https://localhost:5012
-@booking-api=https://localhost:5010
+
+## uncommnet this line for use kubernetes ingress controller instead of Yarp
+//@api-gateway=https://booking-microservices.com  
+@api-gateway=https://localhost:5000  
+@identity-api=http://localhost:6005
+@flight-api=http://localhost:5004
+@passenger-api=http://localhost:6012
+@booking-api=http://localhost:6010
+
 @contentType = application/json
-@flightid = 1
-@passengerId = 1
+@flightid = "3c5c0000-97c6-fc34-2eb9-08db322230c9"
+@passengerId = "8c9c0000-97c6-fc34-2eb9-66db322230c9"
 
 ################################# Identity API #################################
 
@@ -18,7 +21,7 @@ GET {{identity-api}}
 
 ###
 # @name Authenticate
-POST {{api-gateway}}/connect/token
+POST {{api-gateway}}/identity/connect/token
 Content-Type: application/x-www-form-urlencoded
 
 grant_type=password
@@ -33,7 +36,7 @@ grant_type=password
 
 ###
 # @name Register_New_User
-POST {{api-gateway}}/identity/register-user
+POST {{api-gateway}}/identity/api/v1/identity/register-user
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
@@ -42,10 +45,10 @@ authorization: bearer {{Authenticate.response.body.access_token}}
   "firstName": "John",
   "lastName": "Do",
   "username": "admin",
-  "passportNumber": "1290000000",
+  "passportNumber": "412900000000",
   "email": "admin@admin.com",
-  "password": "Admin6@12345",
-  "confirmPassword": "Admin6@12345"
+  "password": "Admin@12345",
+  "confirmPassword": "Admin@12345"
 }
 ###
 
@@ -58,37 +61,37 @@ GET {{flight-api}}
 
 ###
 # @name Create_Seat
-Post {{api-gateway}}/api/v1/flight/seat
+Post {{api-gateway}}/flight/api/v1/flight/seat
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
 
 {
-  "seatNumber": "12H9",
+  "seatNumber": "1255",
   "type": 1,
   "class": 1,
-  "flightId": 1
+  "flightId": "3c5c0000-97c6-fc34-2eb9-08db322230c9"
 }
 ###
 
 
 ###
 # @name Reserve_Seat
-Post {{api-gateway}}/api/v1/flight/reserve-seat
+Post {{api-gateway}}/flight/api/v1/flight/reserve-seat
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
 
 {
-  "flightId": 1,
-  "seatNumber": "12H9"
+  "flightId": "3c5c0000-97c6-fc34-2eb9-08db322230c9",
+  "seatNumber": "1255"
 }
 ###
 
 
 ###
 # @name Get_Available_Seats
-GET {{api-gateway}}/api/v1/flight/get-available-seats/{{flightid}}
+GET {{api-gateway}}/flight/api/v1/flight/get-available-seats/{{flightid}}
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
@@ -97,7 +100,7 @@ authorization: bearer {{Authenticate.response.body.access_token}}
 
 ###
 # @name Get_Flight_By_Id
-GET {{api-gateway}}/api/v1/flight/{{flightid}}
+GET {{api-gateway}}/flight/api/v1/flight/{{flightid}}
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
@@ -106,7 +109,7 @@ authorization: bearer {{Authenticate.response.body.access_token}}
 
 ###
 # @name Get_Available_Flights
-GET {{api-gateway}}/api/v1/flight/get-available-flights
+GET {{api-gateway}}/flight/api/v1/flight/get-available-flights
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
@@ -115,18 +118,18 @@ authorization: bearer {{Authenticate.response.body.access_token}}
 
 ###
 # @name Create_Flights
-POST {{api-gateway}}/api/v1/flight
+POST {{api-gateway}}/flight/api/v1/flight
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
 
 {
-  "flightNumber": "12BB44",
-  "aircraftId": 1,
-  "departureAirportId": 1,
+  "flightNumber": "12BB",
+  "aircraftId": "3c5c0000-97c6-fc34-fcd3-08db322230c8",
+  "departureAirportId": "3c5c0000-97c6-fc34-a0cb-08db322230c8",
   "departureDate": "2022-03-01T14:55:41.255Z",
   "arriveDate": "2022-03-01T14:55:41.255Z",
-  "arriveAirportId": 2,
+  "arriveAirportId": "3c5c0000-97c6-fc34-fc3c-08db322230c8",
   "durationMinutes": 120,
   "flightDate": "2022-03-01T14:55:41.255Z",
   "status": 1,
@@ -137,7 +140,7 @@ authorization: bearer {{Authenticate.response.body.access_token}}
 
 ###
 # @name Update_Flights
-PUT  {{api-gateway}}/api/v1/flight
+PUT  {{api-gateway}}/flight/api/v1/flight
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
@@ -145,11 +148,11 @@ authorization: bearer {{Authenticate.response.body.access_token}}
 {
   "id": 1,
   "flightNumber": "BD467",
-  "aircraftId": 1,
-  "departureAirportId": 1,
+  "aircraftId": "3c5c0000-97c6-fc34-fcd3-08db322230c8",
+  "departureAirportId": "3c5c0000-97c6-fc34-a0cb-08db322230c8",
   "departureDate": "2022-04-23T12:17:45.140Z",
   "arriveDate": "2022-04-23T12:17:45.140Z",
-  "arriveAirportId": 2,
+  "arriveAirportId": "3c5c0000-97c6-fc34-fc3c-08db322230c8",
   "durationMinutes": 120,
   "flightDate": "2022-04-23T12:17:45.140Z",
   "status": 4,
@@ -161,20 +164,16 @@ authorization: bearer {{Authenticate.response.body.access_token}}
 
 ###
 # @name Delete_Flights
-DELETE   {{api-gateway}}/api/v1/flight
+DELETE   {{api-gateway}}/flight/api/v1/flight/{{flightid}}
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
-
-{
-  "id": 1
-}
 ###
 
 
 ###
 # @name Create_Airport
-POST {{api-gateway}}/api/v1/flight/airport
+POST {{api-gateway}}/flight/api/v1/flight/airport
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
@@ -190,7 +189,7 @@ authorization: bearer {{Authenticate.response.body.access_token}}
 
 ###
 # @name Create_Aircraft
-POST {{api-gateway}}/api/v1/flight/aircraft
+POST {{api-gateway}}/flight/api/v1/flight/aircraft
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
@@ -213,13 +212,13 @@ GET {{passenger-api}}
 
 ###
 # @name Complete_Registration_Passenger
-POST {{api-gateway}}/api/v1/passenger/complete-registration
+POST {{api-gateway}}/passenger/api/v1/passenger/complete-registration
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
 
 {
-  "passportNumber": "123456789",
+  "passportNumber": "412900000000",
   "passengerType": 1,
   "age": 30
 }
@@ -228,7 +227,7 @@ authorization: bearer {{Authenticate.response.body.access_token}}
 
 ###
 # @name Get_Passenger_By_Id
-GET  {{api-gateway}}/api/v1/passenger/{{passengerId}}
+GET  {{api-gateway}}/passenger/api/v1/passenger/{{passengerId}}
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
@@ -245,14 +244,14 @@ GET {{booking-api}}
 
 ###
 # @name Create_Booking
-POST {{api-gateway}}/api/v1/booking
+POST {{api-gateway}}/booking/api/v1/booking
 accept: application/json
 Content-Type: application/json
 authorization: bearer {{Authenticate.response.body.access_token}}
 
 {
-  "passengerId": 4776722699124736,
-  "flightId": 1,
+  "passengerId": "8c9c0000-97c6-fc34-2eb9-66db322230c9",
+  "flightId": "3c5c0000-97c6-fc34-2eb9-08db322230c9",
   "description": "I want to fly to iran"
 }
 ###

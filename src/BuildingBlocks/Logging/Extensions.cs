@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using BuildingBlocks.Web;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Serilog;
 using Serilog.Events;
@@ -12,7 +13,7 @@ namespace BuildingBlocks.Logging
 {
     public static class Extensions
     {
-        public static WebApplicationBuilder AddCustomSerilog(this WebApplicationBuilder builder)
+        public static WebApplicationBuilder AddCustomSerilog(this WebApplicationBuilder builder, IWebHostEnvironment env)
         {
             builder.Host.UseSerilog((context, services, loggerConfiguration) =>
             {
@@ -37,27 +38,47 @@ namespace BuildingBlocks.Logging
                     .Enrich.FromLogContext()
                     .ReadFrom.Configuration(context.Configuration);
 
-                if (logOptions.Elastic.Enable)
+                if (logOptions.Elastic is { Enabled: true })
                 {
                     loggerConfiguration.WriteTo.Elasticsearch(
                         new ElasticsearchSinkOptions(new Uri(logOptions.Elastic.ElasticServiceUrl))
                         {
                             AutoRegisterTemplate = true,
-                            IndexFormat =
-                                $"{appOptions.Name}-{environment?.ToLower().Replace(".", "-")}-{DateTime.UtcNow:yyyy-MM}"
+                            IndexFormat = $"{appOptions.Name}-{environment?.ToLower()}"
                         });
                 }
 
-                if (logOptions.File.Enable)
+
+                if (logOptions?.Sentry is {Enabled: true})
                 {
+                    var minimumBreadcrumbLevel = Enum.TryParse<LogEventLevel>(logOptions.Level, true, out var minBreadcrumbLevel)
+                        ? minBreadcrumbLevel
+                        : LogEventLevel.Information;
+
+                    var minimumEventLevel = Enum.TryParse<LogEventLevel>(logOptions.Sentry.MinimumEventLevel, true, out var minEventLevel)
+                        ? minEventLevel
+                        : LogEventLevel.Error;
+
+                    loggerConfiguration.WriteTo.Sentry(o =>
+                    {
+                        o.Dsn = logOptions.Sentry.Dsn;
+                        o.MinimumBreadcrumbLevel = minimumBreadcrumbLevel;
+                        o.MinimumEventLevel = minimumEventLevel;
+                    });
+                }
+
+                if (logOptions.File is { Enabled: true })
+                {
+                    var root = env.ContentRootPath;
+                    Directory.CreateDirectory(Path.Combine(root, "logs"));
+
                     var path = string.IsNullOrWhiteSpace(logOptions.File.Path) ? "logs/.txt" : logOptions.File.Path;
                     if (!Enum.TryParse<RollingInterval>(logOptions.File.Interval, true, out var interval))
                     {
                         interval = RollingInterval.Day;
                     }
 
-                    loggerConfiguration.WriteTo.File(path, rollingInterval: interval, encoding: Encoding.UTF8,
-                        outputTemplate: logOptions.LogTemplate);
+                    loggerConfiguration.WriteTo.File(path, rollingInterval: interval, encoding: Encoding.UTF8, outputTemplate: logOptions.LogTemplate);
                 }
             });
 

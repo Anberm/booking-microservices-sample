@@ -1,10 +1,11 @@
-using BuildingBlocks.Utils;
 using BuildingBlocks.Web;
-using Duende.IdentityServer.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.Jwt;
+
+using Duende.IdentityServer.EntityFramework.Entities;
+using Microsoft.IdentityModel.Tokens;
 
 public static class JwtExtensions
 {
@@ -12,11 +13,21 @@ public static class JwtExtensions
     {
         var jwtOptions = services.GetOptions<JwtBearerOptions>("Jwt");
 
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        services.AddAuthentication(o => {
+                o.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                o.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddCookie(cfg => cfg.SlidingExpiration = true)
             .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
             {
                 options.Authority = jwtOptions.Authority;
-                options.TokenValidationParameters.ValidateAudience = false;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateAudience = false,
+                    ClockSkew = TimeSpan.FromSeconds(2) // For prevent add default value (5min) to life time token!
+                };
+                options.RequireHttpsMetadata = jwtOptions.RequireHttpsMetadata;
+                options.MetadataAddress= jwtOptions.MetadataAddress;
             });
 
         if (!string.IsNullOrEmpty(jwtOptions.Audience))

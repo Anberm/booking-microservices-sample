@@ -7,35 +7,27 @@ public class PersistMessageConfiguration : IEntityTypeConfiguration<PersistMessa
 {
     public void Configure(EntityTypeBuilder<PersistMessage> builder)
     {
-        builder.ToTable("PersistMessage", PersistMessageDbContext.DefaultSchema);
+        builder.ToTable(nameof(PersistMessage));
 
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.Id)
-            .IsRequired();
+        builder.Property(r => r.Id)
+            .IsRequired().ValueGeneratedNever();
+
+        // // ref: https://learn.microsoft.com/en-us/ef/core/saving/concurrency?tabs=fluent-api
+        builder.Property(r => r.Version).IsConcurrencyToken();
 
         builder.Property(x => x.DeliveryType)
-            .HasMaxLength(50)
+            .HasDefaultValue(MessageDeliveryType.Outbox)
             .HasConversion(
-                v => v.ToString(),
-                v => (MessageDeliveryType)Enum.Parse(typeof(MessageDeliveryType), v))
-            .IsRequired()
-            .IsUnicode(false);
+                x => x.ToString(),
+                x => (MessageDeliveryType)Enum.Parse(typeof(MessageDeliveryType), x));
 
-        builder.Property(x => x.DeliveryType)
-            .HasMaxLength(50)
-            .HasConversion(
-                v => v.ToString(),
-                v => (MessageDeliveryType)Enum.Parse(typeof(MessageDeliveryType), v))
-            .IsRequired()
-            .IsUnicode(false);
 
         builder.Property(x => x.MessageStatus)
-            .HasMaxLength(50)
+            .HasDefaultValue(MessageStatus.InProgress)
             .HasConversion(
                 v => v.ToString(),
-                v => (MessageStatus)Enum.Parse(typeof(MessageStatus), v))
-            .IsRequired()
-            .IsUnicode(false);
+                v => (MessageStatus)Enum.Parse(typeof(MessageStatus), v));
     }
 }

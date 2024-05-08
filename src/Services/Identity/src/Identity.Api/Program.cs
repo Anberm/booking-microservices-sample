@@ -1,82 +1,30 @@
-using BuildingBlocks.Core;
-using BuildingBlocks.EFCore;
-using BuildingBlocks.HealthCheck;
-using BuildingBlocks.IdsGenerator;
-using BuildingBlocks.Logging;
-using BuildingBlocks.Mapster;
-using BuildingBlocks.MassTransit;
-using BuildingBlocks.OpenTelemetry;
-using BuildingBlocks.PersistMessageProcessor;
-using BuildingBlocks.Swagger;
-using BuildingBlocks.Utils;
 using BuildingBlocks.Web;
-using Figgle;
-using FluentValidation;
-using Hellang.Middleware.ProblemDetails;
-using Identity;
-using Identity.Data;
-using Identity.Extensions;
-using Microsoft.AspNetCore.Mvc.ApiExplorer;
-using Microsoft.EntityFrameworkCore;
-using Prometheus;
-using Serilog;
+using Identity.Configurations;
+using Identity.Extensions.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
-var configuration = builder.Configuration;
-var env = builder.Environment;
 
-var appOptions = builder.Services.GetOptions<AppOptions>("AppOptions");
-Console.WriteLine(FiggleFonts.Standard.Render(appOptions.Name));
+builder.Host.UseDefaultServiceProvider((context, options) =>
+{
+    // Service provider validation
+    // ref: https://andrewlock.net/new-in-asp-net-core-3-service-provider-validation/
+    options.ValidateScopes = context.HostingEnvironment.IsDevelopment() || context.HostingEnvironment.IsStaging() || context.HostingEnvironment.IsEnvironment("tests");
+    options.ValidateOnBuild = true;
+});
 
-builder.Services.AddPersistMessage(configuration);
-builder.Services.AddCustomDbContext<IdentityContext>(configuration);
-builder.Services.AddScoped<IDataSeeder, IdentityDataSeeder>();
-builder.Services.AddCore();
-builder.AddCustomSerilog();
-builder.Services.AddControllers();
-builder.Services.AddCustomSwagger(configuration, typeof(IdentityRoot).Assembly);
-builder.Services.AddCustomVersioning();
-builder.Services.AddCustomMediatR();
-builder.Services.AddValidatorsFromAssembly(typeof(IdentityRoot).Assembly);
-builder.Services.AddCustomProblemDetails();
-builder.Services.AddCustomMapster(typeof(IdentityRoot).Assembly);
-builder.Services.AddCustomHealthCheck();
-
-builder.Services.AddCustomMassTransit(typeof(IdentityRoot).Assembly, env);
-builder.Services.AddCustomOpenTelemetry();
-
-SnowFlakIdGenerator.Configure(4);
-
-builder.Services.AddIdentityServer(env);
+builder.AddMinimalEndpoints(assemblies:typeof(IdentityRoot).Assembly);
+builder.AddInfrastructure();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    var provider = app.Services.GetService<IApiVersionDescriptionProvider>();
-    app.UseCustomSwagger(provider);
-}
-
-app.UseSerilogRequestLogging();
-app.UseMigration<IdentityContext>(env);
-app.UseCorrelationId();
-app.UseRouting();
-app.UseHttpMetrics();
-app.UseProblemDetails();
-app.UseHttpsRedirection();
-app.UseCustomHealthCheck();
+app.MapMinimalEndpoints();
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseIdentityServer();
-
-app.UseEndpoints(endpoints =>
-{
-    endpoints.MapControllers();
-    endpoints.MapMetrics();
-});
-
-app.MapGet("/", x => x.Response.WriteAsync(appOptions.Name));
+app.UseInfrastructure();
 
 app.Run();
 
-public partial class Program {}
+namespace Identity.Api
+{
+    public partial class Program { }
+}

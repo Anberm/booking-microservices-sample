@@ -1,20 +1,21 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using BuildingBlocks.TestBase;
+using Flight.Api;
 using Flight.Data;
-using Flight.Flights.Features.CreateFlight.Reads;
-using Flight.Flights.Features.GetAvailableFlights;
 using FluentAssertions;
 using Integration.Test.Fakes;
 using Xunit;
 
 namespace Integration.Test.Flight.Features;
 
-public class GetAvailableFlightsTests : IntegrationTestBase<Program, FlightDbContext, FlightReadDbContext>
+using global::Flight.Flights.Features.CreatingFlight.V1;
+using global::Flight.Flights.Features.GettingAvailableFlights.V1;
+
+public class GetAvailableFlightsTests : FlightIntegrationTestBase
 {
     public GetAvailableFlightsTests(
-        IntegrationTestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFixture)
-        : base(integrationTestFixture)
+        TestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFactory) : base(integrationTestFactory)
     {
     }
 
@@ -22,19 +23,17 @@ public class GetAvailableFlightsTests : IntegrationTestBase<Program, FlightDbCon
     public async Task should_return_available_flights()
     {
         // Arrange
-        var flightCommand = new FakeCreateFlightCommand().Generate();
+        var command = new FakeCreateFlightMongoCommand().Generate();
 
-        await Fixture.SendAsync(flightCommand);
+        await Fixture.SendAsync(command);
 
-        await Fixture.ShouldProcessedPersistInternalCommand<CreateFlightMongoCommand>();
-
-        var query = new GetAvailableFlightsQuery();
+        var query = new GetAvailableFlights();
 
         // Act
-        var response = (await Fixture.SendAsync(query))?.ToList();
+        var response = (await Fixture.SendAsync(query))?.FlightDtos?.ToList();
 
         // Assert
         response?.Should().NotBeNull();
-        response?.Count().Should().BeGreaterOrEqualTo(2);
+        response?.Count.Should().BeGreaterOrEqualTo(2);
     }
 }

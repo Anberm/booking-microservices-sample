@@ -1,31 +1,25 @@
 ﻿using System.Threading.Tasks;
 using BuildingBlocks.Contracts.EventBus.Messages;
 using BuildingBlocks.TestBase;
+using Flight.Api;
 using Flight.Data;
-using Flight.Flights.Features.CreateFlight.Reads;
 using FluentAssertions;
 using Integration.Test.Fakes;
-using MassTransit;
-using MassTransit.Testing;
 using Xunit;
 
 namespace Integration.Test.Flight.Features;
 
-public class CreateFlightTests : IntegrationTestBase<Program, FlightDbContext, FlightReadDbContext>
+public class CreateFlightTests : FlightIntegrationTestBase
 {
-    private readonly ITestHarness _testHarness;
-
     public CreateFlightTests(
-        IntegrationTestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFixture) : base(
-        integrationTestFixture)
+        TestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFactory) : base(integrationTestFactory)
     {
-        _testHarness = Fixture.TestHarness;
     }
 
     [Fact]
     public async Task should_create_new_flight_to_db_and_publish_message_to_broker()
     {
-        // Arrange
+        //Arrange
         var command = new FakeCreateFlightCommand().Generate();
 
         // Act
@@ -33,11 +27,8 @@ public class CreateFlightTests : IntegrationTestBase<Program, FlightDbContext, F
 
         // Assert
         response.Should().NotBeNull();
-        response?.FlightNumber.Should().Be(command.FlightNumber);
+        response?.Id.Should().Be(command.Id);
 
-        (await _testHarness.Published.Any<Fault<FlightCreated>>()).Should().BeFalse();
-        (await _testHarness.Published.Any<FlightCreated>()).Should().BeTrue();
-
-        await Fixture.ShouldProcessedPersistInternalCommand<CreateFlightMongoCommand>();
+        (await Fixture.WaitForPublishing<FlightCreated>()).Should().Be(true);
     }
 }

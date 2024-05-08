@@ -1,16 +1,15 @@
 using BuildingBlocks.Contracts.EventBus.Messages;
 using BuildingBlocks.Core;
 using BuildingBlocks.Core.Event;
-using Passenger.Passengers.Events.Domain;
-using Passenger.Passengers.Features.CompleteRegisterPassenger.Reads;
-using Passenger.Passengers.Models;
-using PassengerType = BuildingBlocks.Contracts.Grpc.PassengerType;
 
 namespace Passenger;
 
+using Identity.Consumers.RegisteringNewUser.V1;
+using Passengers.Features.CompletingRegisterPassenger.V1;
+
 public sealed class EventMapper : IEventMapper
 {
-    public IIntegrationEvent MapToIntegrationEvent(IDomainEvent @event)
+    public IIntegrationEvent? MapToIntegrationEvent(IDomainEvent @event)
     {
         return @event switch
         {
@@ -20,13 +19,13 @@ public sealed class EventMapper : IEventMapper
         };
     }
 
-    public IInternalCommand MapToInternalCommand(IDomainEvent @event)
+    public IInternalCommand? MapToInternalCommand(IDomainEvent @event)
     {
         return @event switch
         {
             PassengerRegistrationCompletedDomainEvent e => new CompleteRegisterPassengerMongoCommand(e.Id, e.PassportNumber, e.Name, e.PassengerType,
                 e.Age, e.IsDeleted),
-            PassengerCreatedDomainEvent e => new CompleteRegisterPassengerMongoCommand(e.Id, e.PassportNumber, e.Name, Passengers.Models.PassengerType.Unknown,
+            PassengerCreatedDomainEvent e => new CompleteRegisterPassengerMongoCommand(e.Id, e.PassportNumber, e.Name, Passengers.Enums.PassengerType.Unknown,
                 0, e.IsDeleted),
             _ => null
         };

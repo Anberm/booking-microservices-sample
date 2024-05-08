@@ -1,19 +1,28 @@
-using AutoMapper;
-using BuildingBlocks.Contracts.EventBus.Messages;
-using BuildingBlocks.IdsGenerator;
 using Mapster;
-using Passenger.Passengers.Dtos;
-using Passenger.Passengers.Features.CompleteRegisterPassenger.Reads;
-using Passenger.Passengers.Models.Reads;
 
 namespace Passenger.Passengers.Features;
+
+using CompletingRegisterPassenger.V1;
+using Dtos;
+using MassTransit;
+using Models;
+using ValueObjects;
 
 public class PassengerMappings : IRegister
 {
     public void Register(TypeAdapterConfig config)
     {
         config.NewConfig<CompleteRegisterPassengerMongoCommand, PassengerReadModel>()
-            .Map(d => d.Id, s => SnowFlakIdGenerator.NewId())
-            .Map(d => d.PassengerId, s => s.Id);
+        .Map(d => d.Id, s => NewId.NextGuid())
+            .Map(d => d.PassengerId, s => PassengerId.Of(s.Id));
+
+        config.NewConfig<CompleteRegisterPassengerRequestDto, CompleteRegisterPassenger>()
+            .ConstructUsing(x => new CompleteRegisterPassenger(x.PassportNumber, x.PassengerType, x.Age));
+
+        config.NewConfig<PassengerReadModel, PassengerDto>()
+            .ConstructUsing(x => new PassengerDto(x.PassengerId, x.Name, x.PassportNumber, x.PassengerType, x.Age));
+
+        config.NewConfig<Passenger, PassengerDto>()
+            .ConstructUsing(x => new PassengerDto(x.Id.Value, x.Name.Value, x.PassportNumber.Value, x.PassengerType, x.Age.Value));
     }
 }

@@ -1,16 +1,17 @@
 using System.Reflection;
 using BuildingBlocks.EFCore;
-using BuildingBlocks.Utils;
-using Microsoft.AspNetCore.Http;
+using BuildingBlocks.Web;
 using Microsoft.EntityFrameworkCore;
 
 namespace Passenger.Data;
 
+using Microsoft.Extensions.Logging;
+
 public sealed class PassengerDbContext : AppDbContextBase
 {
-    public const string DefaultSchema = "dbo";
-
-    public PassengerDbContext(DbContextOptions<PassengerDbContext> options, ICurrentUserProvider currentUserProvider) : base(options, currentUserProvider)
+    public PassengerDbContext(DbContextOptions<PassengerDbContext> options,
+        ICurrentUserProvider? currentUserProvider = null, ILogger<PassengerDbContext>? logger = null) :
+        base(options, currentUserProvider, logger)
     {
     }
 
@@ -20,5 +21,7 @@ public sealed class PassengerDbContext : AppDbContextBase
     {
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         base.OnModelCreating(builder);
+        builder.FilterSoftDeletedProperties();
+        builder.ToSnakeCaseTables();
     }
 }

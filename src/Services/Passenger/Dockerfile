@@ -1,8 +1,7 @@
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS builder
-WORKDIR /app
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS builder
+WORKDIR /
 
 # Setup working directory for the project
-WORKDIR /app
 COPY ./src/BuildingBlocks/BuildingBlocks.csproj ./BuildingBlocks/
 COPY ./src/Services/Passenger/src/Passenger/Passenger.csproj ./Services/Passenger/src/Passenger/
 COPY ./src/Services/Passenger/src/Passenger.Api/Passenger.Api.csproj ./Services/Passenger/src/Passenger.Api/
@@ -22,20 +21,23 @@ COPY ./src/Services/Passenger/src/Passenger.Api/  ./Services/Passenger/src/Passe
 RUN ls
 RUN dotnet build  -c Release --no-restore ./Services/Passenger/src/Passenger.Api/Passenger.Api.csproj
 
-WORKDIR /app/Services/Passenger/src/Passenger.Api
+WORKDIR /Services/Passenger/src/Passenger.Api
 
 # Publish project to output folder
 # and no build, as we did it already
 RUN dotnet publish -c Release --no-build -o out
 
-FROM mcr.microsoft.com/dotnet/aspnet:6.0
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 
 # Setup working directory for the project
-WORKDIR /app
-COPY --from=builder /app/Services/Passenger/src/Passenger.Api/out  .
+WORKDIR /
+COPY --from=builder /Services/Passenger/src/Passenger.Api/out  .
 
-ENV ASPNETCORE_URLS https://*:5012, http://*:6012
-ENV ASPNETCORE_ENVIRONMENT docker  
+ENV ASPNETCORE_URLS https://*:443, http://*:80
+ENV ASPNETCORE_ENVIRONMENT docker
+
+EXPOSE 80
+EXPOSE 443
 
 ENTRYPOINT ["dotnet", "Passenger.Api.dll"]
 

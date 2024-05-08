@@ -1,22 +1,20 @@
-using BuildingBlocks.Jwt;
 using BuildingBlocks.Logging;
 using BuildingBlocks.Web;
 using Figgle;
-using Microsoft.AspNetCore.Authentication;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
-
+var env = builder.Environment;
 var appOptions = builder.Services.GetOptions<AppOptions>("AppOptions");
 Console.WriteLine(FiggleFonts.Standard.Render(appOptions.Name));
 
-builder.AddCustomSerilog();
-builder.Services.AddJwt();
+
+
+builder.AddCustomSerilog(env);
 builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddReverseProxy().LoadFromConfig(builder.Configuration.GetSection("Yarp"));
-
 
 var app = builder.Build();
 
@@ -30,16 +28,7 @@ app.UseAuthorization();
 app.UseEndpoints(endpoints =>
 {
     endpoints.MapControllers();
-    endpoints.MapReverseProxy(proxyPipeline =>
-    {
-        proxyPipeline.Use(async (context, next) =>
-        {
-            var token = await context.GetTokenAsync("access_token");
-            context.Request.Headers["Authorization"] = $"Bearer {token}";
-
-            await next().ConfigureAwait(false);
-        });
-    });
+    endpoints.MapReverseProxy();
 });
 
 app.MapGet("/", x => x.Response.WriteAsync(appOptions.Name));

@@ -1,19 +1,19 @@
-using System.Reflection;
 using BuildingBlocks.EFCore;
-using BuildingBlocks.Utils;
 using Flight.Aircrafts.Models;
 using Flight.Airports.Models;
 using Flight.Seats.Models;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace Flight.Data;
 
+using BuildingBlocks.Web;
+using Microsoft.Extensions.Logging;
+
 public sealed class FlightDbContext : AppDbContextBase
 {
-    public const string DefaultSchema = "dbo";
-    public FlightDbContext(DbContextOptions<FlightDbContext> options, ICurrentUserProvider currentUserProvider) : base(
-        options, currentUserProvider)
+    public FlightDbContext(DbContextOptions<FlightDbContext> options, ICurrentUserProvider? currentUserProvider = null,
+        ILogger<FlightDbContext>? logger = null) : base(
+        options, currentUserProvider, logger)
     {
     }
 
@@ -24,8 +24,9 @@ public sealed class FlightDbContext : AppDbContextBase
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        builder.FilterSoftDeletedProperties();
-        builder.ApplyConfigurationsFromAssembly(typeof(FlightRoot).Assembly);
         base.OnModelCreating(builder);
+        builder.ApplyConfigurationsFromAssembly(typeof(FlightRoot).Assembly);
+        builder.FilterSoftDeletedProperties();
+        builder.ToSnakeCaseTables();
     }
 }

@@ -1,20 +1,17 @@
 using BuildingBlocks.Core.Model;
-using BuildingBlocks.IdsGenerator;
-using Flight.Aircrafts.Events;
 
 namespace Flight.Aircrafts.Models;
 
-public record Aircraft : Aggregate<long>
+using Features.CreatingAircraft.V1;
+using ValueObjects;
+
+public record Aircraft : Aggregate<AircraftId>
 {
-    public Aircraft()
-    {
-    }
+    public Name Name { get; private set; } = default!;
+    public Model Model { get; private set; } = default!;
+    public ManufacturingYear ManufacturingYear { get; private set; } = default!;
 
-    public string Name { get; private set; }
-    public string Model { get; private set; }
-    public int ManufacturingYear { get; private set; }
-
-    public static Aircraft Create(long id, string name, string model, int manufacturingYear, bool isDeleted = false)
+    public static Aircraft Create(AircraftId id, Name name, Model model, ManufacturingYear manufacturingYear, bool isDeleted = false)
     {
         var aircraft = new Aircraft
         {

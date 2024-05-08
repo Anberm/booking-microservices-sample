@@ -1,11 +1,12 @@
-﻿using Flight.Aircrafts.Features.CreateAircraft;
-using FluentAssertions;
+﻿using FluentAssertions;
 using FluentValidation.TestHelper;
 using Unit.Test.Common;
 using Unit.Test.Fakes;
 using Xunit;
 
 namespace Unit.Test.Aircraft.Features.CreateAircraftTests;
+
+using global::Flight.Aircrafts.Features.CreatingAircraft.V1;
 
 [Collection(nameof(UnitTestFixture))]
 public class CreateAircraftCommandValidatorTests
@@ -15,7 +16,7 @@ public class CreateAircraftCommandValidatorTests
     {
         // Arrange
         var command = new FakeValidateCreateAircraftCommand().Generate();
-        var validator = new CreateAircraftCommandValidator();
+        var validator = new CreateAircraftValidator();
 
         // Act
         var result = validator.TestValidate(command);

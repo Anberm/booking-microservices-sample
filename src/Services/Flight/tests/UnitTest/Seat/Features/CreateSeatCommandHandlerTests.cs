@@ -1,15 +1,15 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Flight.Seats.Dtos;
-using Flight.Seats.Features.CreateSeat;
 using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Unit.Test.Common;
 using Unit.Test.Fakes;
 using Xunit;
 
 namespace Unit.Test.Seat.Features;
+
+using global::Flight.Seats.Features.CreatingSeat.V1;
+using global::Flight.Seats.ValueObjects;
 
 [Collection(nameof(UnitTestFixture))]
 public class CreateSeatCommandHandlerTests
@@ -21,10 +21,10 @@ public class CreateSeatCommandHandlerTests
     public CreateSeatCommandHandlerTests(UnitTestFixture fixture)
     {
         _fixture = fixture;
-        _handler = new CreateSeatCommandHandler(_fixture.Mapper, _fixture.DbContext);
+        _handler = new CreateSeatCommandHandler(_fixture.DbContext);
     }
 
-    public Task<SeatResponseDto> Act(CreateSeatCommand command, CancellationToken cancellationToken)
+    public Task<CreateSeatResult> Act(CreateSeat command, CancellationToken cancellationToken)
     {
         return _handler.Handle(command, cancellationToken);
     }
@@ -39,17 +39,17 @@ public class CreateSeatCommandHandlerTests
         var response = await Act(command, CancellationToken.None);
 
         // Assert
-        var entity = await _fixture.DbContext.Seats.FindAsync(response?.Id);
+        var entity = await _fixture.DbContext.Seats.FindAsync(SeatId.Of(response.Id));
 
         entity?.Should().NotBeNull();
-        response?.Id.Should().Be(entity?.Id);
+        response?.Id.Should().Be(entity.Id);
     }
 
     [Fact]
     public async Task handler_with_null_command_should_throw_argument_exception()
     {
         // Arrange
-        CreateSeatCommand command = null;
+        CreateSeat command = null;
 
         // Act
         var act = async () => { await Act(command, CancellationToken.None); };

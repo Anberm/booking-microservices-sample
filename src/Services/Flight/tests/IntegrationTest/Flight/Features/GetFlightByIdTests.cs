@@ -1,61 +1,58 @@
 ﻿using System.Threading.Tasks;
-using BuildingBlocks.Contracts.Grpc;
 using BuildingBlocks.TestBase;
+using Flight;
+using Flight.Api;
 using Flight.Data;
-using Flight.Flights.Features.CreateFlight.Reads;
-using Flight.Flights.Features.GetFlightById;
 using FluentAssertions;
-using Grpc.Net.Client;
 using Integration.Test.Fakes;
-using MagicOnion.Client;
 using Xunit;
 
 namespace Integration.Test.Flight.Features;
 
-public class GetFlightByIdTests : IntegrationTestBase<Program, FlightDbContext, FlightReadDbContext>
-{
-    private readonly GrpcChannel _channel;
+using global::Flight.Flights.Features.CreatingFlight.V1;
+using global::Flight.Flights.Features.GettingFlightById.V1;
+using Thrift.Protocol;
 
-    public GetFlightByIdTests(IntegrationTestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFixture) : base(integrationTestFixture)
+public class GetFlightByIdTests : FlightIntegrationTestBase
+{
+    public GetFlightByIdTests(
+        TestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFactory) : base(integrationTestFactory)
     {
-        _channel = Fixture.Channel;
     }
 
     [Fact]
     public async Task should_retrive_a_flight_by_id_currectly()
     {
         //Arrange
-        var command = new FakeCreateFlightCommand().Generate();
+        var command = new FakeCreateFlightMongoCommand().Generate();
+
         await Fixture.SendAsync(command);
 
-        await Fixture.ShouldProcessedPersistInternalCommand<CreateFlightMongoCommand>();
-
-        var query = new GetFlightByIdQuery(command.Id);
+        var query = new GetFlightById(command.Id);
 
         // Act
         var response = await Fixture.SendAsync(query);
 
         // Assert
         response.Should().NotBeNull();
-        response?.FlightId.Should().Be(command.Id);
+        response?.FlightDto?.Id.Should().Be(command.Id);
     }
 
     [Fact]
     public async Task should_retrive_a_flight_by_id_from_grpc_service()
     {
         //Arrange
-        var command = new FakeCreateFlightCommand().Generate();
+        var command = new FakeCreateFlightMongoCommand().Generate();
+
         await Fixture.SendAsync(command);
 
-        await Fixture.ShouldProcessedPersistInternalCommand<CreateFlightMongoCommand>();
-
-        var flightGrpcClient = MagicOnionClient.Create<IFlightGrpcService>(_channel);
+        var flightGrpcClient = new FlightGrpcService.FlightGrpcServiceClient(Fixture.Channel);
 
         // Act
-        var response = await flightGrpcClient.GetById(command.Id);
+        var response = await flightGrpcClient.GetByIdAsync(new GetByIdRequest {Id = command.Id.ToString()}).ResponseAsync;
 
         // Assert
         response?.Should().NotBeNull();
-        response?.FlightId.Should().Be(command.Id);
+        response?.FlightDto.Id.Should().Be(command.Id.ToString());
     }
 }

@@ -1,30 +1,31 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using BuildingBlocks.Contracts.EventBus.Messages;
 using BuildingBlocks.TestBase;
+using Flight.Api;
 using Flight.Data;
-using Flight.Flights.Features.UpdateFlight.Reads;
 using FluentAssertions;
 using Integration.Test.Fakes;
-using MassTransit;
-using MassTransit.Testing;
 using Xunit;
 
 namespace Integration.Test.Flight.Features;
-public class UpdateFlightTests : IntegrationTestBase<Program, FlightDbContext, FlightReadDbContext>
+
+using System.Linq;
+using global::Flight.Data.Seed;
+using global::Flight.Flights.Models;
+using global::Flight.Flights.ValueObjects;
+
+public class UpdateFlightTests : FlightIntegrationTestBase
 {
-    private readonly ITestHarness _testHarness;
-
-    public UpdateFlightTests(IntegrationTestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFixture) : base(integrationTestFixture)
+    public UpdateFlightTests(
+        TestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFactory) : base(integrationTestFactory)
     {
-        _testHarness = Fixture.TestHarness;
     }
-
 
     [Fact]
     public async Task should_update_flight_to_db_and_publish_message_to_broker()
     {
         // Arrange
-        var flightEntity = await Fixture.FindAsync<global::Flight.Flights.Models.Flight>(1);
+        var flightEntity = await Fixture.FindAsync<Flight, FlightId>(InitialData.Flights.First().Id);
         var command = new FakeUpdateFlightCommand(flightEntity).Generate();
 
         // Act
@@ -32,10 +33,8 @@ public class UpdateFlightTests : IntegrationTestBase<Program, FlightDbContext, F
 
         // Assert
         response.Should().NotBeNull();
-        response?.Id.Should().Be(flightEntity?.Id);
-        response?.Price.Should().NotBe(flightEntity?.Price);
-        (await _testHarness.Published.Any<Fault<FlightUpdated>>()).Should().BeFalse();
-        (await _testHarness.Published.Any<FlightUpdated>()).Should().BeTrue();
-        await Fixture.ShouldProcessedPersistInternalCommand<UpdateFlightMongoCommand>();
+        response?.Id.Should().Be(flightEntity.Id);
+
+        (await Fixture.WaitForPublishing<FlightUpdated>()).Should().Be(true);
     }
 }

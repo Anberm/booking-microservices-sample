@@ -226,7 +226,6 @@ ClientBin/
 *.dbmdl
 *.dbproj.schemaview
 *.jfm
-*.pfx
 *.publishsettings
 orleans.codegen.cs
 
@@ -433,3 +432,8 @@ fabric.properties
 
 # Tye
 .tye/
+
+*.jwk
+
+# Monitoring
+**/grafana-data

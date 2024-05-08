@@ -1,6 +1,6 @@
-using BuildingBlocks.Exception;
-
 namespace Flight.Seats.Exceptions;
+
+using BuildingBlocks.Exception;
 
 public class AllSeatsFullException : BadRequestException
 {

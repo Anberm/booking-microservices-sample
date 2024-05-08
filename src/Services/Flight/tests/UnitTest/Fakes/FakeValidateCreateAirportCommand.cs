@@ -1,9 +1,10 @@
 ﻿using AutoBogus;
-using Flight.Airports.Features.CreateAirport;
 
 namespace Unit.Test.Fakes;
 
-public class FakeValidateCreateAirportCommand : AutoFaker<CreateAirportCommand>
+using global::Flight.Airports.Features.CreatingAirport.V1;
+
+public class FakeValidateCreateAirportCommand : AutoFaker<CreateAirport>
 {
     public FakeValidateCreateAirportCommand()
     {

@@ -1,13 +1,15 @@
-﻿using AutoBogus;
-using BuildingBlocks.IdsGenerator;
-using Flight.Aircrafts.Features.CreateAircraft;
+using AutoBogus;
 
 namespace Unit.Test.Fakes;
 
-public class FakeCreateAircraftCommand : AutoFaker<CreateAircraftCommand>
+using global::Flight.Aircrafts.Features.CreatingAircraft.V1;
+using MassTransit;
+
+public class FakeCreateAircraftCommand : AutoFaker<CreateAircraft>
 {
     public FakeCreateAircraftCommand()
     {
-        RuleFor(r => r.Id, _ => SnowFlakIdGenerator.NewId());
+        RuleFor(r => r.Id, _ => NewId.NextGuid());
+        RuleFor(r => r.ManufacturingYear, _ => 2000);
     }
 }

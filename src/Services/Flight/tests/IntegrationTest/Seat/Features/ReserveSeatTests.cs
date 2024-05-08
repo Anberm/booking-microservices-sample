@@ -1,26 +1,18 @@
-﻿using System.Threading.Tasks;
-using BuildingBlocks.Contracts.Grpc;
+using System.Threading.Tasks;
 using BuildingBlocks.TestBase;
+using Flight;
+using Flight.Api;
 using Flight.Data;
-using Flight.Flights.Features.CreateFlight.Reads;
-using Flight.Seats.Features.CreateSeat.Reads;
 using FluentAssertions;
-using Grpc.Net.Client;
 using Integration.Test.Fakes;
-using MagicOnion.Client;
 using Xunit;
 
 namespace Integration.Test.Seat.Features;
-
-public class ReserveSeatTests : IntegrationTestBase<Program, FlightDbContext, FlightReadDbContext>
+public class ReserveSeatTests : FlightIntegrationTestBase
 {
-    private readonly GrpcChannel _channel;
-
     public ReserveSeatTests(
-        IntegrationTestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFixture) : base(
-        integrationTestFixture)
+        TestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFactory) : base(integrationTestFactory)
     {
-        _channel = Fixture.Channel;
     }
 
     [Fact]
@@ -31,25 +23,21 @@ public class ReserveSeatTests : IntegrationTestBase<Program, FlightDbContext, Fl
 
         await Fixture.SendAsync(flightCommand);
 
-        await Fixture.ShouldProcessedPersistInternalCommand<CreateFlightMongoCommand>();
-
         var seatCommand = new FakeCreateSeatCommand(flightCommand.Id).Generate();
 
         await Fixture.SendAsync(seatCommand);
 
-        await Fixture.ShouldProcessedPersistInternalCommand<CreateSeatMongoCommand>();
-
-        var flightGrpcClient = MagicOnionClient.Create<IFlightGrpcService>(_channel);
+        var flightGrpcClient = new FlightGrpcService.FlightGrpcServiceClient(Fixture.Channel);
 
         // Act
-        var response = await flightGrpcClient.ReserveSeat(new ReserveSeatRequestDto
+        var response = await flightGrpcClient.ReserveSeatAsync(new ReserveSeatRequest()
         {
-            FlightId = seatCommand.FlightId, SeatNumber = seatCommand.SeatNumber
+            FlightId = seatCommand.FlightId.ToString(),
+            SeatNumber = seatCommand.SeatNumber
         });
 
         // Assert
         response?.Should().NotBeNull();
-        response?.SeatNumber.Should().Be(seatCommand.SeatNumber);
-        response?.FlightId.Should().Be(seatCommand.FlightId);
+        response?.Id.Should().Be(seatCommand?.Id.ToString());
     }
 }

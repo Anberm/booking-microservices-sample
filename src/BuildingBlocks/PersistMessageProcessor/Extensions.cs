@@ -1,30 +1,51 @@
-﻿using BuildingBlocks.Core;
-using BuildingBlocks.PersistMessageProcessor.Data;
+﻿using BuildingBlocks.PersistMessageProcessor.Data;
 using BuildingBlocks.Web;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BuildingBlocks.PersistMessageProcessor;
 
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+
 public static class Extensions
 {
-    public static IServiceCollection AddPersistMessage(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddPersistMessageProcessor(this IServiceCollection services,
+        IWebHostEnvironment env)
     {
-        services.AddOptions<PersistMessageOptions>()
-            .Bind(configuration.GetSection(nameof(PersistMessageOptions)))
-            .ValidateDataAnnotations();
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
-        var persistMessageOptions = services.GetOptions<PersistMessageOptions>("PersistMessageOptions");
+        services.AddValidateOptions<PersistMessageOptions>();
 
-        services.AddDbContext<PersistMessageDbContext>(options =>
-            options.UseSqlServer(persistMessageOptions.ConnectionString,
-                x => x.MigrationsAssembly(typeof(PersistMessageDbContext).Assembly.GetName().Name)));
+        services.AddDbContext<PersistMessageDbContext>((sp, options) =>
+        {
+            var persistMessageOptions = sp.GetRequiredService<PersistMessageOptions>();
 
-        services.AddScoped<IPersistMessageDbContext>(provider => provider.GetService<PersistMessageDbContext>());
+            options.UseNpgsql(persistMessageOptions.ConnectionString,
+                    dbOptions =>
+                    {
+                        dbOptions.MigrationsAssembly(typeof(PersistMessageDbContext).Assembly.GetName().Name);
+                    })
+                // https://github.com/efcore/EFCore.NamingConventions
+                .UseSnakeCaseNamingConvention();
+        });
+
+        services.AddScoped<IPersistMessageDbContext>(provider =>
+        {
+            var persistMessageDbContext = provider.GetRequiredService<PersistMessageDbContext>();
+
+            persistMessageDbContext.Database.EnsureCreated();
+            persistMessageDbContext.CreatePersistMessageTable();
+
+            return persistMessageDbContext;
+        });
 
         services.AddScoped<IPersistMessageProcessor, PersistMessageProcessor>();
-        services.AddHostedService<PersistMessageBackgroundService>();
+
+        if (env.EnvironmentName != "test")
+        {
+            services.AddHostedService<PersistMessageBackgroundService>();
+        }
 
         return services;
     }

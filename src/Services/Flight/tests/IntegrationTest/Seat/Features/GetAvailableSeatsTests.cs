@@ -1,51 +1,43 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-using BuildingBlocks.Contracts.Grpc;
+﻿using System.Threading.Tasks;
 using BuildingBlocks.TestBase;
+using Flight;
+using Flight.Api;
 using Flight.Data;
-using Flight.Flights.Features.CreateFlight.Reads;
-using Flight.Seats.Features.CreateSeat.Reads;
 using FluentAssertions;
-using Grpc.Net.Client;
 using Integration.Test.Fakes;
-using MagicOnion.Client;
-using MassTransit.Testing;
 using Xunit;
 
 namespace Integration.Test.Seat.Features;
 
-public class GetAvailableSeatsTests : IntegrationTestBase<Program, FlightDbContext, FlightReadDbContext>
-{
-    private readonly GrpcChannel _channel;
+using global::Flight.Flights.Features.CreatingFlight.V1;
+using global::Flight.Seats.Features.CreatingSeat.V1;
 
-    public GetAvailableSeatsTests(IntegrationTestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFixture) : base(integrationTestFixture)
+public class GetAvailableSeatsTests : FlightIntegrationTestBase
+{
+    public GetAvailableSeatsTests(
+        TestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFactory) : base(integrationTestFactory)
     {
-        _channel = Fixture.Channel;
     }
 
     [Fact]
     public async Task should_return_available_seats_from_grpc_service()
     {
         // Arrange
-        var flightCommand = new FakeCreateFlightCommand().Generate();
+        var flightCommand = new FakeCreateFlightMongoCommand().Generate();
 
         await Fixture.SendAsync(flightCommand);
 
-        await Fixture.ShouldProcessedPersistInternalCommand<CreateFlightMongoCommand>();
-
-        var seatCommand = new FakeCreateSeatCommand(flightCommand.Id).Generate();
+        var seatCommand = new FakeCreateSeatMongoCommand(flightCommand.Id).Generate();
 
         await Fixture.SendAsync(seatCommand);
 
-        await Fixture.ShouldProcessedPersistInternalCommand<CreateSeatMongoCommand>();
-
-        var flightGrpcClient = MagicOnionClient.Create<IFlightGrpcService>(_channel);
+        var flightGrpcClient = new FlightGrpcService.FlightGrpcServiceClient(Fixture.Channel);
 
         // Act
-        var response = await flightGrpcClient.GetAvailableSeats(flightCommand.Id);
+        var response = await flightGrpcClient.GetAvailableSeatsAsync(new GetAvailableSeatsRequest{FlightId = flightCommand.Id.ToString()});
 
         // Assert
         response?.Should().NotBeNull();
-        response?.Count().Should().BeGreaterOrEqualTo(1);
+        response?.SeatDtos?.Count.Should().BeGreaterOrEqualTo(1);
     }
 }

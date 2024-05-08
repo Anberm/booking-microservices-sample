@@ -1,25 +1,19 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using BuildingBlocks.Contracts.EventBus.Messages;
 using BuildingBlocks.TestBase;
-using Flight.Aircrafts.Features.CreateAircraft.Reads;
-using Flight.Airports.Features.CreateAirport.Reads;
+using Flight.Api;
 using Flight.Data;
 using FluentAssertions;
-using Grpc.Net.Client;
 using Integration.Test.Fakes;
-using MassTransit;
-using MassTransit.Testing;
 using Xunit;
 
 namespace Integration.Test.Aircraft.Features;
 
-public class CreateAircraftTests : IntegrationTestBase<Program, FlightDbContext, FlightReadDbContext>
+public class CreateAircraftTests : FlightIntegrationTestBase
 {
-    private readonly ITestHarness _testHarness;
-
-    public CreateAircraftTests(IntegrationTestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFixture) : base(integrationTestFixture)
+    public CreateAircraftTests(
+        TestFixture<Program, FlightDbContext, FlightReadDbContext> integrationTestFactory) : base(integrationTestFactory)
     {
-        _testHarness = Fixture.TestHarness;
     }
 
     [Fact]
@@ -32,11 +26,8 @@ public class CreateAircraftTests : IntegrationTestBase<Program, FlightDbContext,
         var response = await Fixture.SendAsync(command);
 
         // Assert
-        response?.Should().NotBeNull();
-        response?.Name.Should().Be(command.Name);
-        (await _testHarness.Published.Any<Fault<AircraftCreated>>()).Should().BeFalse();
-        (await _testHarness.Published.Any<AircraftCreated>()).Should().BeTrue();
+        response?.Id.Value.Should().Be(command.Id);
 
-        await Fixture.ShouldProcessedPersistInternalCommand<CreateAircraftMongoCommand>();
+        (await Fixture.WaitForPublishing<AircraftCreated>()).Should().Be(true);
     }
 }

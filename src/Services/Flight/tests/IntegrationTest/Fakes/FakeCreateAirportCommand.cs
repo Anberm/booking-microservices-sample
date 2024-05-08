@@ -1,13 +1,14 @@
 ﻿using AutoBogus;
-using BuildingBlocks.IdsGenerator;
-using Flight.Airports.Features.CreateAirport;
 
 namespace Integration.Test.Fakes;
 
-public class FakeCreateAirportCommand : AutoFaker<CreateAirportCommand>
+using global::Flight.Airports.Features.CreatingAirport.V1;
+using MassTransit;
+
+public class FakeCreateAirportCommand : AutoFaker<CreateAirport>
 {
     public FakeCreateAirportCommand()
     {
-        RuleFor(r => r.Id, _ => SnowFlakIdGenerator.NewId());
+        RuleFor(r => r.Id, _ => NewId.NextGuid());
     }
 }

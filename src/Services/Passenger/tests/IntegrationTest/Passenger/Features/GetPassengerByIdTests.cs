@@ -1,88 +1,58 @@
 ﻿using System.Threading.Tasks;
-using BuildingBlocks.Contracts.EventBus.Messages;
-using BuildingBlocks.Contracts.Grpc;
 using BuildingBlocks.TestBase;
 using FluentAssertions;
-using Grpc.Net.Client;
 using Integration.Test.Fakes;
-using MagicOnion;
-using MagicOnion.Client;
-using MassTransit.Testing;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using NSubstitute;
+using Passenger;
+using Passenger.Api;
 using Passenger.Data;
-using Passenger.Passengers.Features.GetPassengerById;
 using Xunit;
 
 namespace Integration.Test.Passenger.Features;
 
-public class GetPassengerByIdTests : IntegrationTestBase<Program, PassengerDbContext>
+using global::Passenger.Passengers.Features.GettingPassengerById.V1;
+using Humanizer;
+using Thrift.Protocol;
+
+public class GetPassengerByIdTests : PassengerIntegrationTestBase
 {
-    private readonly ITestHarness _testHarness;
-    private readonly GrpcChannel _channel;
-
-    public GetPassengerByIdTests(IntegrationTestFixture<Program, PassengerDbContext> integrationTestFixture) : base(integrationTestFixture)
+    public GetPassengerByIdTests(
+        TestFixture<Program, PassengerDbContext, PassengerReadDbContext> integrationTestFactory) : base(integrationTestFactory)
     {
-        _channel = Fixture.Channel;
-        _testHarness = Fixture.TestHarness;
     }
-
-    protected override void RegisterTestsServices(IServiceCollection services)
-    {
-        MockPassengerGrpcServices(services);
-    }
-
 
     [Fact]
     public async Task should_retrive_a_passenger_by_id_currectly()
     {
         // Arrange
-        var userCreated = new FakeUserCreated().Generate();
-        await _testHarness.Bus.Publish(userCreated);
-        await _testHarness.Consumed.Any<UserCreated>();
-        var passengerEntity = FakePassengerCreated.Generate(userCreated);
-        await Fixture.InsertAsync(passengerEntity);
+        var command = new FakeCompleteRegisterPassengerMongoCommand().Generate();
 
-        var query = new GetPassengerQueryById(passengerEntity.Id);
+        await Fixture.SendAsync(command);
+
+        var query = new GetPassengerById(command.Id);
 
         // Act
         var response = await Fixture.SendAsync(query);
 
         // Assert
         response.Should().NotBeNull();
-        response?.Id.Should().Be(passengerEntity.Id);
+        response?.PassengerDto?.Id.Should().Be(command.Id);
     }
 
     [Fact]
     public async Task should_retrive_a_passenger_by_id_from_grpc_service()
     {
         // Arrange
-        var userCreated = new FakeUserCreated().Generate();
-        await _testHarness.Bus.Publish(userCreated);
-        await _testHarness.Consumed.Any<UserCreated>();
-        var passengerEntity = FakePassengerCreated.Generate(userCreated);
-        await Fixture.InsertAsync(passengerEntity);
+        var command = new FakeCompleteRegisterPassengerMongoCommand().Generate();
 
-        var passengerGrpcClient = MagicOnionClient.Create<IPassengerGrpcService>(_channel);
+        await Fixture.SendAsync(command);
+
+        var passengerGrpcClient = new PassengerGrpcService.PassengerGrpcServiceClient(Fixture.Channel);
 
         // Act
-        var response = await passengerGrpcClient.GetById(passengerEntity.Id);
+        var response = await passengerGrpcClient.GetByIdAsync(new GetByIdRequest {Id = command.Id.ToString()});
 
         // Assert
         response?.Should().NotBeNull();
-        response?.Id.Should().Be(passengerEntity.Id);
-    }
-
-    private void MockPassengerGrpcServices(IServiceCollection services)
-    {
-        services.Replace(ServiceDescriptor.Singleton(x =>
-        {
-            var mock = Substitute.For<IPassengerGrpcService>();
-            mock.GetById(Arg.Any<long>())
-                .Returns(new UnaryResult<PassengerResponseDto>(new FakePassengerResponseDto().Generate()));
-
-            return mock;
-        }));
+        response?.PassengerDto?.Id.Should().Be(command.Id.ToString());
     }
 }

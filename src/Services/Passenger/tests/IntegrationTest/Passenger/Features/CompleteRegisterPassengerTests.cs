@@ -1,21 +1,19 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using BuildingBlocks.Contracts.EventBus.Messages;
 using BuildingBlocks.TestBase;
 using FluentAssertions;
 using Integration.Test.Fakes;
-using MassTransit.Testing;
+using Passenger.Api;
 using Passenger.Data;
 using Xunit;
 
 namespace Integration.Test.Passenger.Features;
-
-public class CompleteRegisterPassengerTests : IntegrationTestBase<Program, PassengerDbContext>
+public class CompleteRegisterPassengerTests : PassengerIntegrationTestBase
 {
-    private readonly ITestHarness _testHarness;
 
-    public CompleteRegisterPassengerTests(IntegrationTestFixture<Program, PassengerDbContext> integrationTestFixture) : base(integrationTestFixture)
+    public CompleteRegisterPassengerTests(
+        TestFixture<Program, PassengerDbContext, PassengerReadDbContext> integrationTestFactory) : base(integrationTestFactory)
     {
-        _testHarness = Fixture.TestHarness;
     }
 
     [Fact]
@@ -23,9 +21,10 @@ public class CompleteRegisterPassengerTests : IntegrationTestBase<Program, Passe
     {
         // Arrange
         var userCreated = new FakeUserCreated().Generate();
-        await _testHarness.Bus.Publish(userCreated);
-        await _testHarness.Consumed.Any<UserCreated>();
-        await Fixture.InsertAsync(FakePassengerCreated.Generate(userCreated));
+
+        await Fixture.Publish(userCreated);
+        (await Fixture.WaitForPublishing<UserCreated>()).Should().Be(true);
+        (await Fixture.WaitForConsuming<UserCreated>()).Should().Be(true);
 
         var command = new FakeCompleteRegisterPassengerCommand(userCreated.PassportNumber).Generate();
 
@@ -34,9 +33,9 @@ public class CompleteRegisterPassengerTests : IntegrationTestBase<Program, Passe
 
         // Assert
         response.Should().NotBeNull();
-        response?.Name.Should().Be(userCreated.Name);
-        response?.PassportNumber.Should().Be(command.PassportNumber);
-        response?.PassengerType.Should().Be(command.PassengerType);
-        response?.Age.Should().Be(command.Age);
+        response?.PassengerDto?.Name.Should().Be(userCreated.Name);
+        response?.PassengerDto?.PassportNumber.Should().Be(command.PassportNumber);
+        response?.PassengerDto?.PassengerType.ToString().Should().Be(command.PassengerType.ToString());
+        response?.PassengerDto?.Age.Should().Be(command.Age);
     }
 }

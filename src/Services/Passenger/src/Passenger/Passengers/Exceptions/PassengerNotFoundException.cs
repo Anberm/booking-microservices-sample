@@ -1,6 +1,6 @@
-using BuildingBlocks.Exception;
-
 namespace Passenger.Passengers.Exceptions;
+
+using BuildingBlocks.Exception;
 
 public class PassengerNotFoundException: NotFoundException
 {

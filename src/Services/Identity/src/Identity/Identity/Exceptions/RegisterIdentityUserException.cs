@@ -1,6 +1,6 @@
-using BuildingBlocks.Exception;
-
 namespace Identity.Identity.Exceptions;
+
+using BuildingBlocks.Exception;
 
 public class RegisterIdentityUserException : AppException
 {
